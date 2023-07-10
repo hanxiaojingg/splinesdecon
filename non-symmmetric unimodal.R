@@ -1,4 +1,11 @@
-### non-symmmetric unimodal
+############## non-symmmetric unimodal ################
+## y:       observed data with measurement error ~ U[-h,h]
+## h:       size of error density
+## support: the support of the true density to be estimated
+## d :      length between knots
+## plot :   whether to plot the estimated densities
+## lam:     the penalty parameter
+## mode0:   whether the mode is known to be zero. If TRUE, the mode is zero 
 quaddecon <- function(y,h,support=NULL,d=NULL,plot=TRUE,lam=NULL,mode0=TRUE){
   n = length(y)
   if(is.null(support)){
