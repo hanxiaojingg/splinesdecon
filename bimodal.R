@@ -22,8 +22,8 @@ quaddeconbm <- function(y,h,support=NULL,d=NULL,plot=TRUE,lam=NULL){
     l = round((22*n^(1/9))*h/diff(support))
     d = h/l 
   }
-  if(l<2) {
-    l = 2
+  if(l<1) {
+    l = 1
     d = h/l
   }
   
@@ -81,11 +81,11 @@ quaddeconbm <- function(y,h,support=NULL,d=NULL,plot=TRUE,lam=NULL){
   }
   for (i in 1:(m-1)) D[i,i+1]=-1
   for(i in 1:(m-1)) D[i+2,i]=1
-  D = 4*D/3
+  D = 4*D/3*sqrt(d)
   amatl=list()
   iter=0
-  s1=which.min(tk<(min(y)+h))
-  s2=which.max(tk>(max(y)-h))
+  if(tk[1]<(min(y)+h)){s1=max(which.min(tk<(min(y)+h)),2)}else{s1=2}
+  if(tk[m+3]>(max(y)-h)){s2=min(which.max(tk>(max(y)-h)),m)}else{s2=m}
   for(i in s1:(s2-6)){
     for(j in (i+3):(s2-3)){
       for(k in (j+3):(s2)){
@@ -103,8 +103,8 @@ quaddeconbm <- function(y,h,support=NULL,d=NULL,plot=TRUE,lam=NULL){
       }
     }
   }
-  c0vec=t(wmat)%*%(cvec-hmat%*%b0-0.1*diff(range(support))*n^(-5/9)*t(D)%*%D%*%b0)
-  q0mat=t(wmat)%*%(hmat+0.1*diff(range(support))*n^(-5/9)*t(D)%*%D)%*%wmat
+  c0vec=t(wmat)%*%(cvec-hmat%*%b0-0.1*n^(-5/9)*t(D)%*%D%*%b0)
+  q0mat=t(wmat)%*%(hmat+0.1*n^(-5/9)*t(D)%*%D)%*%wmat
   #q0mat=t(wmat)%*%(hmat)%*%wmat
   #for(i in 1:iter){
   #  ans <- quadprog::solve.QP(q0mat,c0vec,t(amatl[[i]]$mat%*%wmat),-amatl[[i]]$mat%*%b0)
@@ -133,7 +133,7 @@ quaddeconbm <- function(y,h,support=NULL,d=NULL,plot=TRUE,lam=NULL){
       bhat=wmat%*%alphahat+b0
       risk[i]=sum(sapply(1:10, function(j){xcv <- y[fold!=j];nm <- n-nf[j];cvecf <- makec(xcv,tk,d,h);
       solf <- quadprog::solve.QP(q0mat, t(wmat)%*%(cvecf-hmat%*%b0-penvals[i]*t(D)%*%D%*%b0), t(amat%*%wmat),-amat%*%b0)
-      alphahatf <- solf$solution;bhatf <- wmat%*%alphahatf + b0;(gammay%*%bhatf)[fold==j]}))
+      alphahatf <- solf$solution;bhatf <- wmat%*%alphahatf + b0;sum((gammay%*%bhatf)[fold==j])}))
       risk[i] <- t(bhat)%*%hmat%*%bhat-2/n*risk[i]
     }
     rm=1:20*0
@@ -184,33 +184,4 @@ quaddeconbm <- function(y,h,support=NULL,d=NULL,plot=TRUE,lam=NULL){
   ans$id=id
   ans$crit=crit
   ans
-}
-
-####make c vector
-makec=function(y,tk,d,h){
-  nc=length(y)
-  nm=length(tk)-3
-  cvec=1:nm
-  if(h==0){
-    for(j in 1:nm){
-      gt=rep(0,nc)
-      gt[y>tk[j]&y<=tk[j+1]] = 2*(y[y>tk[j]&y<=tk[j+1]]-tk[j])^2/d^2/3
-      gt[y>=tk[j+1]&y<=tk[j+2]] = 1-4*(y[y>=tk[j+1]&y<=tk[j+2]]-tk[j+1]-d/2)^2/d^2/3
-      gt[y>tk[j+2]&y<=tk[j+3]] = 2*(y[y>tk[j+2]&y<=tk[j+3]]-tk[j+3])^2/d^2/3
-      cvec[j]=sum(gt)/nc
-    }
-  }else{
-    for(j in 1:nm){
-      gt=rep(0,nc)
-      gt[y>tk[j]-h&y<tk[j+1]-h]=(y[y>tk[j]-h&y<tk[j+1]-h]+h-tk[j])^3/9/h/d^2
-      gt[y>=tk[j+1]-h&y<tk[j+2]-h]=-2*(y[y>=tk[j+1]-h&y<tk[j+2]-h]+h-tk[j+1]-d/2)^3/9/h/d^2+(y[y>=tk[j+1]-h&y<tk[j+2]-h]+h-tk[j+1])/2/h+d/h/12
-      gt[y>=tk[j+2]-h&y<tk[j+3]-h]=(y[y>=tk[j+2]-h&y<tk[j+3]-h]+h-tk[j+3])^3/9/d/h^2+2*d/3/h
-      gt[y>=tk[j+3]-h&y<=tk[j]+h]=2*d/3/h
-      gt[y>tk[j]+h&y<=tk[j+1]+h]= -(y[y>tk[j]+h&y<=tk[j+1]+h]-h-tk[j])^3/9/d/h^2+2*d/3/h
-      gt[y>tk[j+1]+h&y<=tk[j+2]+h]=2*(y[y>tk[j+1]+h&y<=tk[j+2]+h]-h-tk[j+1]-d/2)^3/9/h/d^2+(-y[y>tk[j+1]+h&y<=tk[j+2]+h]+tk[j+2]+h)/2/h+d/12/h
-      gt[y>tk[j+2]+h&y<tk[j+3]+h]=(-y[y>tk[j+2]+h&y<tk[j+3]+h]+tk[j+3]+h)^3/9/h/d^2
-      cvec[j]=sum(gt)/nc
-    }
-  }
-  cvec
 }
